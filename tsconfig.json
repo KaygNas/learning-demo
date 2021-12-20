@@ -10,12 +10,16 @@
     "esModuleInterop": true,
     "lib": [
       "esnext",
-      "dom"
+      "dom",
+    ],
+    "types": [
+      "@types/node"
     ]
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
-    "src/**/*.tsx"
-  ]
+    "src/**/*.tsx",
+    "src/**/*.vue"
+  ],
 }
