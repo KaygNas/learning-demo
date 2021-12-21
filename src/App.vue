@@ -55,10 +55,7 @@ const callElevator = (floor: number, direction: Direction) => {
 		floors: floors,
 		targetFloor: floor,
 		elevatorStatus: elevatorStatus,
-		direction,
 	}
-
-	console.log('click', event)
 	emitter.emit('click', event)
 }
 
@@ -67,9 +64,9 @@ elevator.subscribe((status) => {
 	Object.assign(elevatorStatus, status)
 	const curFloor = getFloor(floors, status.floor)
 	const direction = elevatorStatus.direction
-
 	curFloor[direction] = false
 })
+
 watch(
 	() => elevatorStatus.floor,
 	() => {

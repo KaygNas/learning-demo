@@ -15,7 +15,6 @@ export type Event = {
 	floors: Floor[]
 	targetFloor: number
 	elevatorStatus: ElevatorStatus
-	direction: Direction
 }
 
 export const getFloor = (floors: Floor[], floor: number) => floors[floors.length - floor]
@@ -27,18 +26,23 @@ const getElevatorCalls = (floors: Floor[], elevatorStatus: ElevatorStatus) => {
 	const FIRST_FLOOR = 1
 	const baseFloor = elevatorStatus.floor
 
-	// 上行召唤时，由于时从下向上行，所以需要将召唤按低到高排序，取出所有剩下的上行召唤
-	const _floors = JSON.parse(JSON.stringify(floors)) as Floor[]
-	const upCalls = _floors
+	// 上行召唤时，由于由从下向上行，所以需要将召唤按低到高排序，取出所有剩下的上行召唤
+	const _floors = (JSON.parse(JSON.stringify(floors)) as Floor[])
 		// sort 方法会 mutate 数组，所以要拷贝一份
 		.sort((a, b) => a.floor - b.floor)
-		.filter((f) => f.up)
-		.map((f) => f.floor)
-	// 下行召唤时，取出所有剩下的下行召唤
+	const upCalls = _floors.filter((f) => f.up).map((f) => f.floor)
+	// 取出所有剩下的下行召唤
 	const downCalls = floors.filter((f) => f.down).map((f) => f.floor)
 	// 起点设为电梯的当前楼层，终点设为一层
 	return [baseFloor, ...upCalls, ...downCalls, FIRST_FLOOR]
 }
+
+/**
+ * 把相邻的召唤划为一组，如输入 [1, 2, 3] 将输出 [[1, 2], [2, 3]]
+ * 用于后续将 [1, 2] 转换为从 F1 到 F2 的事件流
+ * @param floors
+ * @returns
+ */
 const spiltCallsToPair = (floors: number[]) => {
 	const callPairs: [number, number][] = []
 	floors.forEach((floor, i) => {
@@ -83,7 +87,7 @@ export function Elevator(emitter: any, type: string) {
 	return fromEvent(emitter, type).pipe(
 		// 过滤掉以下情况的事件，保证电梯能够执行一次完整的上下行：
 		filter((e) => {
-			const { floors, targetFloor, elevatorStatus, direction } = e as Event
+			const { targetFloor, elevatorStatus } = e as Event
 			// 1. 电梯正在下行，上层有新的召唤
 			if (elevatorStatus.direction === 'down' && targetFloor > elevatorStatus.floor) return false
 			// 2. 电梯正在上行，下层有新的召唤
@@ -93,8 +97,7 @@ export function Elevator(emitter: any, type: string) {
 
 		// 把点击事件映射电梯的事件流
 		switchMap((e) => {
-			const { floors, direction, elevatorStatus } = e as Event
-
+			const { floors, elevatorStatus } = e as Event
 			// 收集此刻的上行电梯召唤和下行电梯召唤
 			const elevatorCalls = getElevatorCalls(floors, elevatorStatus)
 			// 将每个召唤分别映射为一段事件流，以表示从x楼到y楼，再从y楼到z楼
