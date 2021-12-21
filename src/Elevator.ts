@@ -30,19 +30,22 @@ const getElevatorCalls = (
 ) => {
 	const FIRST_FLOOR = 1
 	const baseFloor = elevatorStatus.floor
-	const maxFloor = getMaxFloor(floors, direction)!.floor
 
 	if (direction === 'up') {
-		const upCalls = floors.filter((f) => f.up).map((f) => f.floor)
-		const downCalls = [maxFloor]
-		return upCalls.concat(downCalls)
-	} else {
-		const upCalls = [baseFloor]
-		const downCalls = floors
-			.filter((f) => f.down)
+		// 上行召唤时，由于时从下向上行，所以需要将召唤按低到高排序，取出所有剩下的上行召唤
+		const _floors = JSON.parse(JSON.stringify(floors)) as Floor[]
+		// ? 为什么使用 floor 进行排序会 mutate
+		const calls = _floors
+			.sort((a, b) => a.floor - b.floor)
+			.filter((f) => f.up)
 			.map((f) => f.floor)
-			.concat([FIRST_FLOOR])
-		return upCalls.concat(downCalls)
+		// 起点设为电梯的当前楼层，终点设为一层
+		return [baseFloor].concat(calls).concat([FIRST_FLOOR])
+	} else {
+		// 下行召唤时，取出所有剩下的下行召唤
+		const calls = floors.filter((f) => f.down).map((f) => f.floor)
+		// 起点设为电梯的当前楼层，终点设为一层
+		return [baseFloor].concat(calls).concat([FIRST_FLOOR])
 	}
 }
 const spiltCallsToPair = (floors: number[]) => {
@@ -86,12 +89,14 @@ const commandElevator = ([floorFrom, floorTo]: [number, number]) => {
 }
 
 export function Elevator(emitter: any, type: string) {
-	return fromEvent(emitter, 'click').pipe(
+	return fromEvent(emitter, type).pipe(
 		// 过滤掉以下情况的事件，保证电梯能够执行一次完整的上下行：
 		filter((e) => {
 			const { floors, targetFloor, elevatorStatus, direction } = e as Event
 			// 1. 电梯正在下行，上层有新的召唤
 			if (elevatorStatus.direction === 'down' && targetFloor > elevatorStatus.floor) return false
+			// 2. 电梯正在上行，下层有新的召唤
+			if (elevatorStatus.direction === 'up' && targetFloor < elevatorStatus.floor) return false
 			return true
 		}),
 

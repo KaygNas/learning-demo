@@ -8,10 +8,22 @@
 				>
 					{{ f.floor }}
 				</span>
-				<!-- <button @click="callElevator(f.floor, 'up')">↑</button> -->
-				<button @click="callElevator(f.floor, 'down')">↓</button>
-				<!-- <span v-show="f.up" style="margin-left: 10px; color: red">↑</span> -->
-				<span v-show="f.down" style="margin-left: 10px; color: red">↓</span>
+				<button
+					:class="{
+						calling: f.up,
+					}"
+					@click="callElevator(f.floor, 'up')"
+				>
+					↑
+				</button>
+				<button
+					:class="{
+						calling: f.down,
+					}"
+					@click="callElevator(f.floor, 'down')"
+				>
+					↓
+				</button>
 			</div>
 		</template>
 		<div style="height: 1px; width: 100%; background-color: #000; margin: 10px 0"></div>
@@ -46,7 +58,7 @@ const elevatorStatus = reactive<ElevatorStatus>({ floor: 1, direction: 'up', idl
 const emitter = new EventEmitter()
 const callElevator = (floor: number, direction: Direction) => {
 	const curFloor = getFloor(floors, floor)
-	curFloor.down = true
+	curFloor[direction] = true
 	const event: Event = {
 		floors: floors,
 		targetFloor: floor,
@@ -97,5 +109,9 @@ watch(
 }
 .floor-director--current {
 	background-color: orange;
+}
+.calling {
+	background-color: orange;
+	color: white;
 }
 </style>
