@@ -23,30 +23,21 @@ export const getMaxFloor = (floors: Floor[], direction: Direction) => {
 	return floors.find((f) => f[direction])
 }
 
-const getElevatorCalls = (
-	floors: Floor[],
-	elevatorStatus: ElevatorStatus,
-	direction: Direction,
-) => {
+const getElevatorCalls = (floors: Floor[], elevatorStatus: ElevatorStatus) => {
 	const FIRST_FLOOR = 1
 	const baseFloor = elevatorStatus.floor
 
-	if (direction === 'up') {
-		// 上行召唤时，由于时从下向上行，所以需要将召唤按低到高排序，取出所有剩下的上行召唤
-		const _floors = JSON.parse(JSON.stringify(floors)) as Floor[]
-		// ? 为什么使用 floor 进行排序会 mutate
-		const calls = _floors
-			.sort((a, b) => a.floor - b.floor)
-			.filter((f) => f.up)
-			.map((f) => f.floor)
-		// 起点设为电梯的当前楼层，终点设为一层
-		return [baseFloor].concat(calls).concat([FIRST_FLOOR])
-	} else {
-		// 下行召唤时，取出所有剩下的下行召唤
-		const calls = floors.filter((f) => f.down).map((f) => f.floor)
-		// 起点设为电梯的当前楼层，终点设为一层
-		return [baseFloor].concat(calls).concat([FIRST_FLOOR])
-	}
+	// 上行召唤时，由于时从下向上行，所以需要将召唤按低到高排序，取出所有剩下的上行召唤
+	const _floors = JSON.parse(JSON.stringify(floors)) as Floor[]
+	const upCalls = _floors
+		// sort 方法会 mutate 数组，所以要拷贝一份
+		.sort((a, b) => a.floor - b.floor)
+		.filter((f) => f.up)
+		.map((f) => f.floor)
+	// 下行召唤时，取出所有剩下的下行召唤
+	const downCalls = floors.filter((f) => f.down).map((f) => f.floor)
+	// 起点设为电梯的当前楼层，终点设为一层
+	return [baseFloor, ...upCalls, ...downCalls, FIRST_FLOOR]
 }
 const spiltCallsToPair = (floors: number[]) => {
 	const callPairs: [number, number][] = []
@@ -105,7 +96,7 @@ export function Elevator(emitter: any, type: string) {
 			const { floors, direction, elevatorStatus } = e as Event
 
 			// 收集此刻的上行电梯召唤和下行电梯召唤
-			const elevatorCalls = getElevatorCalls(floors, elevatorStatus, direction)
+			const elevatorCalls = getElevatorCalls(floors, elevatorStatus)
 			// 将每个召唤分别映射为一段事件流，以表示从x楼到y楼，再从y楼到z楼
 			const run = spiltCallsToPair(elevatorCalls)
 				.map((fromTo) => commandElevator(fromTo))
