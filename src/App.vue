@@ -13,7 +13,7 @@
 <script lang="ts" setup>
 import { EventEmitter } from 'events'
 import { reactive, watch } from 'vue'
-import { Elevator, Floor, ElevatorStatus, Event } from './Elevator'
+import { Elevator, Floor, ElevatorStatus, Event, getFloor, getMaxFloor } from './Elevator'
 
 const MAX_FLOOR = 10
 const floors = reactive<Floor[]>(
@@ -23,20 +23,12 @@ const floors = reactive<Floor[]>(
 		down: false,
 	})),
 )
-const getFloor = (floor: number) => floors[MAX_FLOOR - floor]
-const getMaxFloor = () => {
-	for (let floorNum = MAX_FLOOR; floorNum > 0; floorNum--) {
-		const floor = getFloor(floorNum)
-		if (floor.down) {
-			return getFloor(floor.floor)
-		}
-	}
-}
+
 const elevatorStatus = reactive<ElevatorStatus>({ floor: 1, direction: 'stop' })
 const emitter = new EventEmitter()
 const elevator = Elevator(emitter, 'click')
 const pressDown = (floor: number) => {
-	const curFloor = getFloor(floor)
+	const curFloor = getFloor(floors, floor)
 	curFloor.down = true
 	const event: Event = {
 		floors: floors,
@@ -49,7 +41,7 @@ const pressDown = (floor: number) => {
 }
 elevator.subscribe((status) => {
 	Object.assign(elevatorStatus, status)
-	const curFloor = getFloor(status.floor)
+	const curFloor = getFloor(floors, status.floor)
 	const direction = elevatorStatus.direction
 	if (direction === 'stop') {
 		curFloor.up = false
@@ -63,7 +55,7 @@ watch(
 	() => {
 		// 电梯抵达一楼后，检查有没有其他楼层正在召唤
 		if (elevatorStatus.floor === 1) {
-			const maxFloor = getMaxFloor()
+			const maxFloor = getMaxFloor(floors)
 			// 没有则休息
 			if (!maxFloor) return
 			// 有则继续调度电梯
