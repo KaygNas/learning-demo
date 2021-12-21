@@ -40,7 +40,7 @@ export function Elevator(emitter: any, type: string) {
 		// 把点击事件映射电梯的事件流
 		switchMap((e) => {
 			const { floors, elevatorStatus } = e as Event
-			const targetFloor = getMaxFloor(floors)?.floor || 1
+			const targetFloor = getMaxFloor(floors)?.floor ?? 1
 			const curFloorAtMomemt = elevatorStatus.floor
 
 			// 把点击事件映射 n 次的事件流（模拟电梯上行一层楼），间隔 1s,
