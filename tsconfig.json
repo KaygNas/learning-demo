@@ -12,9 +12,6 @@
       "esnext",
       "dom",
     ],
-    "types": [
-      "@types/node"
-    ]
   },
   "include": [
     "src/**/*.ts",
