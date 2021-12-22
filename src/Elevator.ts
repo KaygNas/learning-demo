@@ -26,13 +26,19 @@ const getElevatorCalls = (floors: Floor[], elevatorStatus: ElevatorStatus) => {
 	const FIRST_FLOOR = 1
 	const baseFloor = elevatorStatus.floor
 
-	// 上行召唤时，由于由从下向上行，所以需要将召唤按低到高排序，取出所有剩下的上行召唤
+	// 上行召唤时，由于由从下向上行，所以需要将召唤按低到高排序
 	const _floors = (JSON.parse(JSON.stringify(floors)) as Floor[])
 		// sort 方法会 mutate 数组，所以要拷贝一份
 		.sort((a, b) => a.floor - b.floor)
-	const upCalls = _floors.filter((f) => f.up).map((f) => f.floor)
-	// 取出所有剩下的下行召唤
-	const downCalls = floors.filter((f) => f.down).map((f) => f.floor)
+	const upCalls = _floors
+		.filter((f) => f.up && !(elevatorStatus.direction === 'up' && f.floor < elevatorStatus.floor))
+		.map((f) => f.floor)
+
+	const downCalls = floors
+		.filter(
+			(f) => f.down && !(elevatorStatus.direction === 'down' && f.floor > elevatorStatus.floor),
+		)
+		.map((f) => f.floor)
 	// 起点设为电梯的当前楼层，终点设为一层
 	return [baseFloor, ...upCalls, ...downCalls, FIRST_FLOOR]
 }
@@ -54,47 +60,34 @@ const spiltCallsToPair = (floors: number[]) => {
 }
 
 const commandElevator = ([floorFrom, floorTo]: [number, number]) => {
-	if (floorTo > floorFrom) {
-		// 把点击事件映射 n 次的事件流（模拟电梯上行一层楼），间隔 1s,
-		return interval(1000).pipe(
-			map<number, ElevatorStatus>((x) => {
-				const newFloor = x + floorFrom
-				return {
-					floor: newFloor,
-					direction: 'up',
-					idle: newFloor === floorTo,
-				}
-			}),
-			take(floorTo + 1 - floorFrom),
-		)
-	} else {
-		// 和另外一个 n 次的事件流（模拟电梯抵达楼层后下行），间隔 1s,
-		return interval(1000).pipe(
-			map<number, ElevatorStatus>((x) => {
-				const newFloor = floorFrom - x
-				return {
-					floor: newFloor,
-					direction: 'down',
-					idle: newFloor === floorTo,
-				}
-			}),
-			take(floorFrom + 1 - floorTo),
-		)
-	}
+	const direction: Direction = floorTo > floorFrom ? 'up' : 'down'
+	const sign = direction === 'up' ? +1 : -1
+	const distance: number = Math.abs(floorFrom - floorTo)
+
+	return interval(1000).pipe(
+		map<number, ElevatorStatus>((x) => {
+			const newFloor = floorFrom + x * sign
+			return {
+				floor: newFloor,
+				direction: direction,
+				idle: newFloor === floorTo,
+			}
+		}),
+		take(distance + 1),
+	)
 }
 
 export function Elevator(emitter: any, type: string) {
 	return fromEvent(emitter, type).pipe(
 		// 过滤掉以下情况的事件，保证电梯能够执行一次完整的上下行：
 		filter((e) => {
-			const { targetFloor, elevatorStatus } = e as Event
-			// 1. 电梯正在下行，上层有新的召唤
-			if (elevatorStatus.direction === 'down' && targetFloor > elevatorStatus.floor) return false
-			// 2. 电梯正在上行，下层有新的召唤
+			const { floors, elevatorStatus, targetFloor } = e as Event
+			// 1. 电梯正在上行，下层的召唤
 			if (elevatorStatus.direction === 'up' && targetFloor < elevatorStatus.floor) return false
+			// 2. 电梯正在下行，上层的召唤
+			if (elevatorStatus.direction === 'down' && targetFloor > elevatorStatus.floor) return false
 			return true
 		}),
-
 		// 把点击事件映射电梯的事件流
 		switchMap((e) => {
 			const { floors, elevatorStatus } = e as Event
