@@ -1,9 +1,5 @@
 import { Degree } from './Unit'
 type Cord = [number, number]
-interface Rotation {
-	degree: Degree
-	centerPoint: Cord
-}
 export interface ElementInfo {
 	top: number
 	left: number
@@ -17,12 +13,16 @@ export class Element {
 	width: number
 	height: number
 	color: string
-	rotation: Rotation
+	rotateDegree: Degree
 	get right() {
 		return this.left + this.width
 	}
 	get bottom() {
 		return this.top + this.height
+	}
+
+	get rotateCenterPoint(): Cord {
+		return [this.left + this.width / 2, this.top + this.height / 2]
 	}
 
 	constructor(info: ElementInfo) {
@@ -31,22 +31,24 @@ export class Element {
 		this.width = info.width
 		this.height = info.height
 		this.color = info.color || '#000'
-		this.rotation = {
-			degree: new Degree(0),
-			centerPoint: [0, 0],
-		}
+		this.rotateDegree = new Degree(0)
 	}
 
-	rotate(degree: Degree, centerPoint?: Cord): this {
-		this.rotation.degree = this.rotation.degree.clac((v) => v + degree.value)
-		if (centerPoint) this.rotation.centerPoint = centerPoint
+	rotate(degree: Degree): this {
+		this.rotateDegree = this.rotateDegree.clac((v) => v + degree.value)
+		return this
+	}
+
+	translate(x: number, y: number): this {
+		this.left += x
+		this.top += y
 		return this
 	}
 
 	render(ctx: CanvasRenderingContext2D): this {
-		ctx.translate(...this.rotation.centerPoint)
-		ctx.rotate(this.rotation.degree.toAngle().value)
-		ctx.translate(...(this.rotation.centerPoint.map((v) => v * -1) as Cord))
+		ctx.translate(...this.rotateCenterPoint)
+		ctx.rotate(this.rotateDegree.toAngle().value)
+		ctx.translate(...(this.rotateCenterPoint.map((v) => v * -1) as Cord))
 
 		ctx.fillStyle = this.color
 		ctx.fillRect(this.left, this.top, this.width, this.height)
