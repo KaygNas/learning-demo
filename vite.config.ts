@@ -4,11 +4,13 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
 	plugins: [vue()],
 	build: {
-		minify: false,
+		minify: true,
 		rollupOptions: {
 			output: {
-				manualChunks() {
-					return 'main'
+				manualChunks(id) {
+					if (id.includes('rxjs')) return 'rxjs'
+					else if (id.includes('vue')) return 'vue'
+					else return 'main'
 				},
 			},
 		},
